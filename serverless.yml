@@ -1,0 +1,55 @@
+service: nodeless
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: sa-east-1 # região em que eu quero que essa função execute
+  memorySize: 256 # tamanho de memória que eu quero utilizar para minha função -- Megas
+
+  # Quanto a gente cria uma função lambda dentro da aws, precisamos indicar quais são as permissões
+  # dessa função, quais serviços da aws essa função está autorizada a utilizar.
+  iamRoleStatements:
+    - Effect: Allow
+      # GetObject
+      # isso aqui permite a minha função lambda de ir no serviço s3 da amazon
+      # e buscar informações sobre um objeto armazenado no s3. Seja ele imagem, um vídeo, etc...
+
+      # PutObject
+      # permite que a minha função lambda salve arquivos dentro do s3
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+      # Em qual bucket do s3 essa função está permitida fazer isso
+      Resource:
+        - "arn:aws:s3:::*"
+
+functions:
+  optimize:
+    handler: optimize.handle
+    environment:
+      bucket: minhas_imagens
+    # aqui eu configuro qual evento dispara essa minha função
+    # defino que é o s3 da amazon, e qual o bucket que vou utilizar
+    # defino qual é o evento que eu quero ouvir do s3. Nesse caso,
+    # toda vez que um objeto for criado dentro do s3
+
+    # o asterisco serve para indicar que não importa a maneira que o upload/ObjectCreated
+    # nesse bucket foi feito.
+    events:
+      - s3:
+          bucket: minhas_imagens
+          event: s3:ObjectCreated:*
+          # aqui eu defino que não quero disparar essa função quando for feito
+          # upload em arquivos de vídeo. Quero disparar apenas quando forem feitos uploads
+          # apenas em arquivos de imagem
+          rules:
+            - prefix: uploads/ # a pasta que as minhas imagens estarão
+            - suffix: .jpg
+      - s3:
+          bucket: minhas_imagens
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: uploads/
+            - suffix: .png
